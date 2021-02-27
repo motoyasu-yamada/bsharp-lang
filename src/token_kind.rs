@@ -19,6 +19,7 @@ pub enum TokenKind {
   ASTERISK,
   SLASH,
   ASSIGN,
+  PERCENT,
 }
 
 impl fmt::Display for TokenKind {

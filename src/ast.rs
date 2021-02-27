@@ -38,26 +38,58 @@ impl fmt::Display for Statement {
   }
 }
 
-#[derive(Debug, PartialEq)]
+// #[derive(Debug, PartialEq, Clone)]
+// pub enum UnaryOperator {
+//   Negative,
+// }
+// impl fmt::Display for UnaryOperator {
+//   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//     write!(f, "{:?}", self)
+//   }
+// }
+#[derive(Debug, PartialEq, Clone)]
+pub enum BinaryOperator {
+  Add,
+  Sub,
+  Mul,
+  Div,
+  Mod,
+}
+impl fmt::Display for BinaryOperator {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{:?}", self)
+  }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
   Identifier(String),
   Integer(i32),
-  Add {
+  // Unary {
+  //   operator: UnaryOperator,
+  //   expression: Box<Expression>,
+  // },
+  Binary {
     left: Box<Expression>,
-    right: Box<Expression>,
-  },
-  Mul {
-    left: Box<Expression>,
+    operator: BinaryOperator,
     right: Box<Expression>,
   },
 }
+
 impl fmt::Display for Expression {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
       Expression::Identifier(i) => write!(f, "{}", i)?,
       Expression::Integer(n) => write!(f, "{}", n)?,
-      Expression::Add { left, right } => write!(f, "{} + {}", left, right)?,
-      Expression::Mul { left, right } => write!(f, "{} * {}", left, right)?,
+      // Expression::Unary {
+      //   operator,
+      //   expression,
+      // } => write!(f, "{}{}", operator, expression)?,
+      Expression::Binary {
+        left,
+        operator,
+        right,
+      } => write!(f, "{}{}{}", left, operator, right)?,
     }
     Ok(())
   }

@@ -3,6 +3,7 @@ mod errors;
 mod executor;
 mod keywords;
 mod lexer;
+mod object;
 mod parser;
 mod token;
 mod token_kind;
@@ -10,18 +11,24 @@ mod token_kind;
 extern crate log;
 use env_logger;
 use std::env;
-
+use std::fs::File;
+use std::io::prelude::*;
 fn main() {
   env::set_var("RUST_LOG", "debug");
   env_logger::init();
+
+  let args: Vec<String> = env::args().collect();
   println!("B# version 0.0");
-  let line = r#"
-Const a = 1 + 2
-Const b = a * (a + 1)
-Print b
-  "#;
+  println!("{:?}", args);
+  let src = &args[1];
+  let mut f = File::open(src).expect("file not found");
+
+  let mut contents = String::new();
+  f.read_to_string(&mut contents)
+    .expect("something went wrong reading the file");
+  println!("Sourcecode:\n\n{}", contents);
   let mut e = executor::Executor::new();
-  let l = lexer::Lexer::new(&line);
+  let l = lexer::Lexer::new(&contents);
   let mut parser = parser::Parser::new(l);
   let program = parser.parse_program();
   match program {

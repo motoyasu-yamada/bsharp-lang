@@ -1,4 +1,4 @@
-use super::ast::{Expression, Program, Statement};
+use super::ast::{BinaryOperator, Expression, Program, Statement};
 use super::errors::Errors;
 use super::lexer::Lexer;
 use super::token::Token;
@@ -83,29 +83,40 @@ impl<'a> Parser<'a> {
       TokenKind::IDENT => Expression::Identifier(self.current_token.value.clone()),
       TokenKind::INT => Expression::Integer(self.parse_integer()?),
       TokenKind::LPAREN => self.parse_grouped_expression()?,
+      // TokenKind::MINUS => {
+      //   self.next_token();
+      //   Expression::Unary {
+      //     expression: Box::new(self.parse_expression()?),
+      //     operator: UnaryOperator::Negative,
+      //   }
+      // }
       _ => return Err(Errors::TokenInvalid(self.current_token.clone())),
     };
     self.next_token();
     match self.current_token.kind {
-      TokenKind::PLUS => {
-        self.next_token();
-        let right = self.parse_expression()?;
-        e = Expression::Add {
-          left: Box::new(e),
-          right: Box::new(right),
-        };
-      }
-      TokenKind::ASTERISK => {
-        self.next_token();
-        let right = self.parse_expression()?;
-        e = Expression::Mul {
-          left: Box::new(e),
-          right: Box::new(right),
-        };
-      }
+      TokenKind::PLUS => e = self.parse_binary_operation(&e, BinaryOperator::Add)?,
+      TokenKind::MINUS => e = self.parse_binary_operation(&e, BinaryOperator::Sub)?,
+      TokenKind::ASTERISK => e = self.parse_binary_operation(&e, BinaryOperator::Mul)?,
+      TokenKind::SLASH => e = self.parse_binary_operation(&e, BinaryOperator::Div)?,
+      TokenKind::PERCENT => e = self.parse_binary_operation(&e, BinaryOperator::Mod)?,
       _ => e = e,
     }
 
+    Ok(e)
+  }
+
+  fn parse_binary_operation(
+    &mut self,
+    left: &Expression,
+    operator: BinaryOperator,
+  ) -> Result<Expression, Errors> {
+    self.next_token();
+    let right = self.parse_expression()?;
+    let e = Expression::Binary {
+      left: Box::new(left.clone()),
+      operator,
+      right: Box::new(right),
+    };
     Ok(e)
   }
 

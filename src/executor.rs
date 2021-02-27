@@ -1,27 +1,8 @@
-use super::ast::{Expression, Program, Statement};
+use super::ast::{BinaryOperator, Expression, Program, Statement};
 use super::errors::Errors;
+use super::object::Object;
 use log::debug;
 use std::collections::BTreeMap;
-use std::fmt;
-
-#[derive(Debug, Clone)]
-pub enum Object {
-  Default,
-  Null,
-  InvalidObjectType,
-  Integer(i32),
-}
-impl fmt::Display for Object {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    match self {
-      Object::Default => write!(f, "Default")?,
-      Object::Null => write!(f, "Null")?,
-      Object::Integer(v) => write!(f, "Integer({})", v)?,
-      Object::InvalidObjectType => write!(f, "InvalidObjectType")?,
-    }
-    Ok(())
-  }
-}
 
 pub struct Executor {
   variables: BTreeMap<String, Object>,
@@ -89,22 +70,35 @@ impl Executor {
         _ => Ok(Object::Null),
       },
       Expression::Integer(value) => Ok(Object::Integer(*value)),
-      Expression::Add { left, right } => {
+      Expression::Binary {
+        left,
+        operator,
+        right,
+      } => {
         let l = self.execute_expression(&left)?;
         let r = self.execute_expression(&right)?;
         match (l, r) {
-          (Object::Integer(l), Object::Integer(r)) => Ok(Object::Integer(l + r)),
+          (Object::Integer(l), Object::Integer(r)) => match operator {
+            BinaryOperator::Add => Ok(Object::Integer(l + r)),
+            BinaryOperator::Sub => Ok(Object::Integer(l - r)),
+            BinaryOperator::Mul => Ok(Object::Integer(l * r)),
+            BinaryOperator::Div => Ok(Object::Integer(l / r)),
+            BinaryOperator::Mod => Ok(Object::Integer(l % r)),
+          },
           _ => Ok(Object::InvalidObjectType),
         }
-      }
-      Expression::Mul { left, right } => {
-        let l = self.execute_expression(&left)?;
-        let r = self.execute_expression(&right)?;
-        match (l, r) {
-          (Object::Integer(l), Object::Integer(r)) => Ok(Object::Integer(l * r)),
-          _ => Ok(Object::InvalidObjectType),
-        }
-      }
+      } // Expression::Unary {
+        //   operator,
+        //   expression,
+        // } => {
+        //   let evaluated = self.execute_expression(&expression)?;
+        //   match evaluated {
+        //     Object::Integer(n) => match operator {
+        //       UnaryOperator::Negative => Ok(Object::Integer(-n)),
+        //     },
+        //     _ => Ok(Object::InvalidObjectType),
+        //   }
+        // }
     }
   }
 
