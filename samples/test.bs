@@ -1,0 +1,3 @@
+Const a = 1 + 2
+Const b = a * (a + 1)
+Print b
