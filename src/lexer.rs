@@ -57,15 +57,49 @@ impl<'a> Lexer<'a> {
       b'-' => {
         token = Self::new_token(TokenKind::MINUS, self.ch);
       }
-      b'=' => {
-        token = Self::new_token(TokenKind::ASSIGN, self.ch);
-      }
       b'(' => {
         token = Self::new_token(TokenKind::LPAREN, self.ch);
       }
       b')' => {
         token = Self::new_token(TokenKind::RPAREN, self.ch);
       }
+      b'=' => {
+        token = Self::new_token(TokenKind::ASSIGN, self.ch);
+      }
+      b'^' => {
+        token = Self::new_token(TokenKind::HAT, self.ch);
+      }
+      b'<' => match self.prefetch_char() {
+        b'>' => {
+          self.read_char();
+          token = Token {
+            kind: TokenKind::NE,
+            value: "<>".to_string(),
+          }
+        }
+        b'=' => {
+          self.read_char();
+          token = Token {
+            kind: TokenKind::LE,
+            value: "<=".to_string(),
+          }
+        }
+        _ => {
+          token = Self::new_token(TokenKind::LT, self.ch);
+        }
+      },
+      b'>' => match self.prefetch_char() {
+        b'=' => {
+          self.read_char();
+          token = Token {
+            kind: TokenKind::GE,
+            value: "<=".to_string(),
+          }
+        }
+        _ => {
+          token = Self::new_token(TokenKind::GT, self.ch);
+        }
+      },
       b'"' => {
         token = Token {
           kind: TokenKind::STRING,
@@ -102,6 +136,14 @@ impl<'a> Lexer<'a> {
   fn skip_whitespace(&mut self) {
     while self.ch == b' ' || self.ch == b'\t' {
       self.read_char();
+    }
+  }
+
+  fn prefetch_char(&mut self) -> u8 {
+    if self.read_position >= self.input.len() {
+      return 0;
+    } else {
+      return self.input.as_bytes()[self.read_position];
     }
   }
 

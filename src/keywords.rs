@@ -3,7 +3,19 @@ use super::token_kind::TokenKind;
 pub fn get_keyword(ident: &str) -> TokenKind {
   match ident {
     "Const" => TokenKind::CONST,
-    "Print" => TokenKind::PRINT,
+    "Dim" => TokenKind::DIM,
+    "And" => TokenKind::AND,
+    "Not" => TokenKind::NOT,
+    "Or" => TokenKind::OR,
+    "Xor" => TokenKind::XOR,
+    "Mod" => TokenKind::MOD,
+    "If" => TokenKind::IF,
+    "Then" => TokenKind::THEN,
+    "Else" => TokenKind::ELSE,
+    "END" => TokenKind::END,
+    "FOR" => TokenKind::FOR,
+    "To" => TokenKind::TO,
+    "Next" => TokenKind::NEXT,
     _ => TokenKind::IDENT,
   }
 }

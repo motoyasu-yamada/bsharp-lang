@@ -5,6 +5,7 @@ mod keywords;
 mod lexer;
 mod object;
 mod parser;
+mod runtime_error;
 mod token;
 mod token_kind;
 

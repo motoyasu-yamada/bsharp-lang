@@ -1,6 +1,8 @@
-use super::ast::{BinaryOperator, Expression, Program, Statement};
-use super::errors::Errors;
-use super::object::Object;
+use super::ast::{
+  expression::Expression, program::Program, statement::Statement, BinaryOperator, UnaryOperator,
+};
+use super::object::{Object, RuntimeType, TypeOf};
+use super::runtime_error::RuntimeError;
 use log::debug;
 use std::collections::BTreeMap;
 
@@ -14,8 +16,8 @@ impl Executor {
       variables: BTreeMap::new(),
     };
   }
-  pub fn execute(&mut self, program: &Program) -> Result<Object, Errors> {
-    let mut r = Object::Default;
+  pub fn execute(&mut self, program: &Program) -> Result<Object, RuntimeError> {
+    let mut r = Object::Undefined;
     for s in program.statements.iter() {
       r = self.execute_statement(s)?;
       debug!("Statement: {}", r);
@@ -23,10 +25,9 @@ impl Executor {
     Ok(r)
   }
 
-  pub fn set_variable(&mut self, name: String, value: Object) -> Object {
+  pub fn set_variable(&mut self, name: String, value: &Object) {
     debug!("set_variable: {}={}", name, value);
     self.variables.insert(name, value.clone());
-    return value;
   }
 
   pub fn get_variable(&mut self, name: &str) -> Option<Object> {
@@ -42,14 +43,37 @@ impl Executor {
     }
   }
 
-  fn execute_statement(&mut self, statement: &Statement) -> Result<Object, Errors> {
+  fn execute_statement(&mut self, statement: &Statement) -> Result<Object, RuntimeError> {
     match statement {
-      Statement::ConstAssignment {
+      Statement::Declaration {
         identifier,
         expression,
       } => self.execute_const_assignment(identifier.to_string(), &expression),
-      Statement::Print { arguments } => self.execute_print(arguments),
-      Statement::Empty => Ok(Object::Null),
+      Statement::Assignment {
+        identifier,
+        expression,
+      } => self.execute_const_assignment(identifier.to_string(), &expression),
+      Statement::MethodInvocation {
+        identifier,
+        arguments,
+      } => self.execute_method(identifier, &arguments),
+      Statement::Empty => Ok(Object::Undefined),
+    }
+  }
+
+  fn execute_method(
+    &mut self,
+    identifier: &str,
+    arguments: &Vec<Expression>,
+  ) -> Result<Object, RuntimeError> {
+    match identifier {
+      "print" => {
+        for a in arguments {
+          println!("{}", a);
+        }
+        Ok(Object::Undefined)
+      }
+      _ => Err(RuntimeError::UnknownMethod(identifier.to_string())),
     }
   }
 
@@ -57,17 +81,17 @@ impl Executor {
     &mut self,
     identifier: String,
     expression: &Expression,
-  ) -> Result<Object, Errors> {
+  ) -> Result<Object, RuntimeError> {
     let evaluated = self.execute_expression(expression)?;
-    self.set_variable(identifier.to_owned(), evaluated);
-    Ok(Object::Null)
+    self.set_variable(identifier.to_owned(), &evaluated);
+    Ok(evaluated)
   }
 
-  fn execute_expression(&mut self, expression: &Expression) -> Result<Object, Errors> {
+  fn execute_expression(&mut self, expression: &Expression) -> Result<Object, RuntimeError> {
     match expression {
       Expression::Identifier(name) => match self.get_variable(name) {
         Some(value) => Ok(value),
-        _ => Ok(Object::Null),
+        _ => Ok(Object::Undefined),
       },
       Expression::Integer(value) => Ok(Object::Integer(*value)),
       Expression::Binary {
@@ -79,37 +103,66 @@ impl Executor {
         let r = self.execute_expression(&right)?;
         match (l, r) {
           (Object::Integer(l), Object::Integer(r)) => match operator {
-            BinaryOperator::Add => Ok(Object::Integer(l + r)),
-            BinaryOperator::Sub => Ok(Object::Integer(l - r)),
-            BinaryOperator::Mul => Ok(Object::Integer(l * r)),
-            BinaryOperator::Div => Ok(Object::Integer(l / r)),
-            BinaryOperator::Mod => Ok(Object::Integer(l % r)),
+            BinaryOperator::ADD => Ok(Object::Integer(l + r)),
+            BinaryOperator::SUB => Ok(Object::Integer(l - r)),
+            BinaryOperator::MUL => Ok(Object::Integer(l * r)),
+            BinaryOperator::DIV => Ok(Object::Integer(l / r)),
+            BinaryOperator::MOD => Ok(Object::Integer(l % r)),
+            BinaryOperator::EQ => Ok(Object::Boolean(l == r)),
+            BinaryOperator::NE => Ok(Object::Boolean(l != r)),
+            BinaryOperator::GT => Ok(Object::Boolean(l > r)),
+            BinaryOperator::LT => Ok(Object::Boolean(l < r)),
+            BinaryOperator::LE => Ok(Object::Boolean(l >= r)),
+            BinaryOperator::GE => Ok(Object::Boolean(l <= r)),
+            _ => Err(RuntimeError::TypeMismatch {
+              expected: RuntimeType::Integer,
+              actual: RuntimeType::Boolean,
+            }),
           },
-          _ => Ok(Object::InvalidObjectType),
+          (Object::Boolean(l), Object::Boolean(r)) => match operator {
+            BinaryOperator::AND => Ok(Object::Boolean(l && r)),
+            BinaryOperator::XOR => Ok(Object::Boolean(l || r)),
+            BinaryOperator::OR => Ok(Object::Boolean(l || r)),
+            _ => Err(RuntimeError::TypeMismatch {
+              expected: RuntimeType::Boolean,
+              actual: RuntimeType::Integer,
+            }),
+          },
+          (l, r) => Err(RuntimeError::TypeMismatch {
+            expected: l.type_of(),
+            actual: r.type_of(),
+          }),
         }
-      } // Expression::Unary {
-        //   operator,
-        //   expression,
-        // } => {
-        //   let evaluated = self.execute_expression(&expression)?;
-        //   match evaluated {
-        //     Object::Integer(n) => match operator {
-        //       UnaryOperator::Negative => Ok(Object::Integer(-n)),
-        //     },
-        //     _ => Ok(Object::InvalidObjectType),
-        //   }
-        // }
+      }
+      Expression::Unary {
+        operator,
+        expression,
+      } => {
+        let evaluated = self.execute_expression(&expression)?;
+        match operator {
+          UnaryOperator::NEGATIVE => match evaluated {
+            Object::Integer(n) => Ok(Object::Integer(-n)),
+            _ => Err(RuntimeError::TypeMismatch {
+              expected: RuntimeType::Integer,
+              actual: RuntimeType::Integer,
+            }),
+          },
+          UnaryOperator::POSITIVE => match evaluated {
+            Object::Integer(n) => Ok(Object::Integer(n)),
+            _ => Err(RuntimeError::TypeMismatch {
+              expected: RuntimeType::Integer,
+              actual: RuntimeType::Integer,
+            }),
+          },
+          UnaryOperator::NOT => match evaluated {
+            Object::Boolean(n) => Ok(Object::Boolean(!n)),
+            _ => Err(RuntimeError::TypeMismatch {
+              expected: RuntimeType::Integer,
+              actual: RuntimeType::Integer,
+            }),
+          },
+        }
+      }
     }
-  }
-
-  fn execute_print(&mut self, arguments: &Vec<Expression>) -> Result<Object, Errors> {
-    let last = arguments.len() - 1;
-    for (i, a) in arguments.iter().enumerate() {
-      let v = self.execute_expression(a)?;
-      let head = if i == 0 { "Print: " } else { "," };
-      let trail = if i == last { "\n" } else { "" };
-      print!("{}{}{}", head, v, trail);
-    }
-    Ok(Object::Null)
   }
 }
