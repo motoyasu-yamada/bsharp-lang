@@ -67,9 +67,10 @@ impl Executor {
     arguments: &Vec<Expression>,
   ) -> Result<Object, RuntimeError> {
     match identifier {
-      "print" => {
+      "Print" => {
         for a in arguments {
-          println!("{}", a);
+          let evaluated = self.execute_expression(a)?;
+          println!("{}", evaluated);
         }
         Ok(Object::Undefined)
       }

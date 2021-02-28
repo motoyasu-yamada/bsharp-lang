@@ -46,6 +46,7 @@ impl<'a> Lexer<'a> {
         }
       }
       b'\n' => token = Self::new_token(TokenKind::EOL, self.ch),
+      b',' => token = Self::new_token(TokenKind::COMMA, self.ch),
       b'*' => token = Self::new_token(TokenKind::ASTERISK, self.ch),
       b'%' => token = Self::new_token(TokenKind::PERCENT, self.ch),
       b'/' => {

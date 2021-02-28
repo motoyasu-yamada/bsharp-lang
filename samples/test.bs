@@ -1,3 +1,3 @@
 Const a = 1 + 2
-Const b = a * (a + 1 * 2)
-Print b
+Const b = a * (a + 1 * 2 + 2 - 1 * 4)
+Print (b, b<>a,b=a)

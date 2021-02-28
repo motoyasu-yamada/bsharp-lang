@@ -106,6 +106,7 @@ impl<'a> Parser<'a> {
       return Ok(None);
     }
     self.next_token();
+    self.next_token();
     let expression = self.parse_expression()?;
 
     return Ok(Some((identifier, expression)));
@@ -202,7 +203,7 @@ impl<'a> Parser<'a> {
     debug!(">>> parse_equality_expression {}", self.current_token.kind);
     let e = self.parse_additive_expression()?;
     let op;
-    match self.next_token.kind {
+    match self.current_token.kind {
       TokenKind::ASSIGN => op = BinaryOperator::EQ,
       TokenKind::NE => op = BinaryOperator::NE,
       TokenKind::LT => op = BinaryOperator::LT,
@@ -220,7 +221,7 @@ impl<'a> Parser<'a> {
     debug!(">>> parse_additive_expression {}", self.current_token.kind);
     let e = self.parse_multiplicative_expression()?;
     let op;
-    match self.next_token.kind {
+    match self.current_token.kind {
       TokenKind::PLUS => op = BinaryOperator::ADD,
       TokenKind::MINUS => op = BinaryOperator::SUB,
       _ => return Ok(e),
@@ -237,7 +238,7 @@ impl<'a> Parser<'a> {
     );
     let e = self.parse_unary_expression()?;
     let op;
-    match self.next_token.kind {
+    match self.current_token.kind {
       TokenKind::ASTERISK => op = BinaryOperator::MUL,
       TokenKind::SLASH => op = BinaryOperator::DIV,
       TokenKind::PERCENT => op = BinaryOperator::MOD,
@@ -278,16 +279,14 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_primary(&mut self) -> Result<Expression, Errors> {
+    debug!(">>> parse_primary {}", self.current_token.kind);
     let e = match self.current_token.kind {
-      TokenKind::IDENT => {
-        let i = self.current_token.value.clone();
-        self.next_token();
-        Expression::Identifier(i)
-      }
-      TokenKind::INT => Expression::Integer(self.parse_integer()?),
+      TokenKind::IDENT => Expression::Identifier(self.current_token.value.clone()),
+      TokenKind::INT => Expression::Integer(self.current_token.value.parse::<i32>().unwrap()),
       TokenKind::LPAREN => self.parse_grouped_expression()?,
       _ => return Err(Errors::TokenInvalid(self.current_token.clone())),
     };
+    self.next_token();
     Ok(e)
   }
 
@@ -320,10 +319,6 @@ impl<'a> Parser<'a> {
     } else {
       Err(Errors::TokenInvalid(self.current_token.clone()))
     }
-  }
-
-  fn parse_integer(&mut self) -> Result<i32, Errors> {
-    Ok(self.current_token.value.parse::<i32>().unwrap())
   }
 
   fn next_token(&mut self) {
