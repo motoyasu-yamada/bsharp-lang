@@ -1,8 +1,8 @@
 use super::ast::{
   expression::Expression, program::Program, statement::Statement, BinaryOperator, UnaryOperator,
 };
-use super::errors::Errors;
 use super::lexer::Lexer;
+use super::parse_error::{ParseError, ParseErrorType};
 use super::token::Token;
 use super::token_kind::TokenKind;
 
@@ -15,41 +15,48 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-  pub fn new(l: Lexer<'a>) -> Self {
-    let mut p = Parser {
-      lexer: l,
-      current_token: Token {
-        kind: TokenKind::DEFAULT,
-        value: "value".to_string(),
-      },
-      next_token: Token {
-        kind: TokenKind::DEFAULT,
-        value: "value".to_string(),
-      },
+  pub fn new(mut lexer: Lexer<'a>) -> Self {
+    let current_token = lexer.next_token();
+    let next_token = lexer.next_token();
+    return Parser {
+      lexer,
+      current_token,
+      next_token,
     };
-    p.next_token();
-    p.next_token();
-    return p;
   }
 
-  pub fn parse_program(&mut self) -> Result<Program, Errors> {
+  pub fn parse_program(&mut self) -> Result<Program, ParseError> {
     debug!(">>> parse_program");
-    let mut statements: Vec<Statement> = vec![];
-    while self.current_token.kind != TokenKind::EOF {
-      let s = self.parse_statement()?;
-      debug!("Statement: {}", s);
-      statements.push(s);
-      let k = self.current_token.kind;
-      if !(k == TokenKind::EOL || k == TokenKind::EOF) {
-        debug!("*** {}", k);
-        return Err(Errors::TokenInvalid(self.next_token.clone()));
-      }
-      self.next_token();
-    }
+    let statements = self.parse_statements(|k| *k == TokenKind::EOF)?;
     Ok(Program { statements })
   }
 
-  fn parse_statement(&mut self) -> Result<Statement, Errors> {
+  fn parse_statements(
+    &mut self,
+    to_stop: fn(&TokenKind) -> bool,
+  ) -> Result<Vec<Statement>, ParseError> {
+    let mut statements: Vec<Statement> = vec![];
+    loop {
+      debug!("parse_statements:loop {:?}", self.current_token);
+      if to_stop(&self.current_token.kind) {
+        debug!("Break");
+        break;
+      }
+      let s = self.parse_statement()?;
+      statements.push(s);
+      let k = self.current_token.kind;
+      if !(k == TokenKind::EOL || to_stop(&k)) {
+        return Err(self.raise_error(
+          ParseErrorType::InvalidToken,
+          format!("Expected an end keyword of statement, but {}", k),
+        ));
+      }
+      self.next_token();
+    }
+    return Ok(statements);
+  }
+
+  fn parse_statement(&mut self) -> Result<Statement, ParseError> {
     debug!(">>> parse_statement {}", self.current_token.kind);
     let s = match self.current_token.kind {
       TokenKind::IF => self.parse_if_statement()?,
@@ -62,19 +69,119 @@ impl<'a> Parser<'a> {
     Ok(s)
   }
 
-  fn parse_if_statement(&mut self) -> Result<Statement, Errors> {
-    Err(Errors::Unsupported)
+  fn parse_if_statement(&mut self) -> Result<Statement, ParseError> {
+    let mut if_blocks: Vec<(Expression, Vec<Statement>)> = vec![];
+    let mut else_statements: Vec<Statement> = vec![];
+    let to_stop: fn(&TokenKind) -> bool = |k| *k == TokenKind::ELSE || *k == TokenKind::END;
+
+    {
+      if self.current_token.kind != TokenKind::IF {
+        return Err(self.raise_error(
+          ParseErrorType::InvalidToken,
+          format!("Expected IF, but {}", self.current_token.kind),
+        ));
+      }
+      self.next_token();
+      let condition = self.parse_expression()?;
+      if self.current_token.kind != TokenKind::THEN {
+        return Err(self.raise_error(
+          ParseErrorType::InvalidToken,
+          format!("Expected THEN, but {}", self.current_token.kind),
+        ));
+      }
+      self.next_token();
+      if self.current_token.kind != TokenKind::EOL {
+        return Err(self.raise_error(
+          ParseErrorType::InvalidToken,
+          format!("Expected EOL, but {}", self.current_token.kind),
+        ));
+      }
+      self.next_token();
+      let statements: Vec<Statement> = self.parse_statements(to_stop)?;
+
+      if_blocks.push((condition, statements));
+    }
+
+    loop {
+      debug!("*** LOOP {}", self.current_token.kind);
+      if self.current_token.kind == TokenKind::END {
+        debug!("*** END");
+        self.next_token();
+        if self.current_token.kind != TokenKind::IF {
+          return Err(self.raise_error(
+            ParseErrorType::InvalidToken,
+            format!("Expected IF, but {}", self.current_token.kind),
+          ));
+        }
+        debug!("*** IF");
+        self.next_token();
+        debug!("*** BREAK");
+        break;
+      }
+      if self.current_token.kind != TokenKind::ELSE {
+        return Err(self.raise_error(
+          ParseErrorType::InvalidToken,
+          format!("Expected ELSE, but {}", self.current_token.kind),
+        ));
+      }
+      if 0 < else_statements.len() {
+        return Err(self.raise_error(
+          ParseErrorType::InvalidToken,
+          format!("Not expected ELSE, but {}", self.current_token.kind),
+        ));
+      }
+      self.next_token();
+      if self.current_token.kind == TokenKind::IF {
+        let c = self.parse_expression()?;
+        if self.current_token.kind != TokenKind::THEN {
+          return Err(self.raise_error(
+            ParseErrorType::InvalidToken,
+            format!("Expected THEN, but {}", self.current_token.kind),
+          ));
+        }
+        self.next_token();
+        if self.current_token.kind != TokenKind::EOL {
+          return Err(self.raise_error(
+            ParseErrorType::InvalidToken,
+            format!("Expected EOL, but {}", self.current_token.kind),
+          ));
+        }
+        self.next_token();
+        let statements: Vec<Statement> = self.parse_statements(to_stop)?;
+        if_blocks.push((c, statements));
+      } else {
+        debug!(">>> ELSE");
+        if self.current_token.kind != TokenKind::EOL {
+          return Err(self.raise_error(
+            ParseErrorType::InvalidToken,
+            format!("Expected EOL, but {}", self.current_token.kind),
+          ));
+        }
+        self.next_token();
+        debug!("<<< ELSE {}", self.current_token.kind);
+        else_statements = self.parse_statements(to_stop)?;
+        debug!(">>>");
+      }
+    }
+
+    Ok(Statement::IfStatement {
+      if_blocks,
+      else_statements,
+    })
   }
 
-  fn parse_for_statement(&mut self) -> Result<Statement, Errors> {
-    Err(Errors::Unsupported)
+  fn parse_for_statement(&mut self) -> Result<Statement, ParseError> {
+    return Err(self.raise_error(
+      ParseErrorType::Unsupported,
+      format!("For statement is not supported."),
+    ));
   }
 
   /*
   - `ExpressionStatement`       ::= `Assignment` |
                                     `MethodInvocation`
   */
-  fn parse_expression_statement(&mut self) -> Result<Statement, Errors> {
+  fn parse_expression_statement(&mut self) -> Result<Statement, ParseError> {
     debug!(">>> parse_expression_statement {}", self.current_token.kind);
     match self.parse_assignment()? {
       Some((identifier, expression)) => Ok(Statement::Assignment {
@@ -85,7 +192,7 @@ impl<'a> Parser<'a> {
     }
   }
 
-  fn parse_const_assignment_statement(&mut self) -> Result<Statement, Errors> {
+  fn parse_const_assignment_statement(&mut self) -> Result<Statement, ParseError> {
     debug!(">>> parse_const_assignment_statement");
     self.next_token();
     match self.parse_assignment()? {
@@ -93,11 +200,14 @@ impl<'a> Parser<'a> {
         identifier,
         expression,
       }),
-      None => Err(Errors::Unsupported),
+      None => Err(self.raise_error(
+        ParseErrorType::InvalidToken,
+        format!("Expected Const or Dim, but {}", self.current_token.kind),
+      )),
     }
   }
 
-  fn parse_assignment(&mut self) -> Result<Option<(String, Expression)>, Errors> {
+  fn parse_assignment(&mut self) -> Result<Option<(String, Expression)>, ParseError> {
     if self.current_token.kind != TokenKind::IDENT {
       return Ok(None);
     }
@@ -112,14 +222,21 @@ impl<'a> Parser<'a> {
     return Ok(Some((identifier, expression)));
   }
 
-  fn parse_method_invocation(&mut self) -> Result<Statement, Errors> {
+  fn parse_method_invocation(&mut self) -> Result<Statement, ParseError> {
+    debug!(">>> parse_method_invocation");
     if self.current_token.kind != TokenKind::IDENT {
-      return Err(Errors::TokenInvalid(self.current_token.clone()));
+      return Err(self.raise_error(
+        ParseErrorType::InvalidToken,
+        format!("Expected IDENT, but {}", self.current_token.kind),
+      ));
     }
     let identifier = self.current_token.value.clone();
     self.next_token();
     if self.current_token.kind != TokenKind::LPAREN {
-      return Err(Errors::TokenInvalid(self.current_token.clone()));
+      return Err(self.raise_error(
+        ParseErrorType::InvalidToken,
+        format!("Expected LPAREN, but {}", self.current_token.kind),
+      ));
     }
     self.next_token();
     let mut arguments: Vec<Expression> = vec![];
@@ -130,7 +247,10 @@ impl<'a> Parser<'a> {
           break;
         }
         if self.current_token.kind != TokenKind::COMMA {
-          return Err(Errors::TokenInvalid(self.current_token.clone()));
+          return Err(self.raise_error(
+            ParseErrorType::InvalidToken,
+            format!("Expected COMMA, but {}", self.current_token.kind),
+          ));
         }
         self.next_token();
       }
@@ -147,7 +267,7 @@ impl<'a> Parser<'a> {
   - `LogicalXorExpression`      ::= `LogicalOrExpression` |
                                     `LogicalXorExpression` "Xor" `LogicalOrExpression`
   */
-  fn parse_expression(&mut self) -> Result<Expression, Errors> {
+  fn parse_expression(&mut self) -> Result<Expression, ParseError> {
     debug!(">>> parse_expression {}", self.current_token.kind);
     let e = self.parse_logical_or_expression()?;
     if self.next_token.kind != TokenKind::XOR {
@@ -158,7 +278,7 @@ impl<'a> Parser<'a> {
     Ok(self.binary_operation(&e, BinaryOperator::XOR, &right))
   }
 
-  fn parse_logical_or_expression(&mut self) -> Result<Expression, Errors> {
+  fn parse_logical_or_expression(&mut self) -> Result<Expression, ParseError> {
     debug!(
       ">>> parse_logical_or_expression {}",
       self.current_token.kind
@@ -172,7 +292,7 @@ impl<'a> Parser<'a> {
     Ok(self.binary_operation(&e, BinaryOperator::OR, &right))
   }
 
-  fn parse_logical_and_expression(&mut self) -> Result<Expression, Errors> {
+  fn parse_logical_and_expression(&mut self) -> Result<Expression, ParseError> {
     debug!(
       ">>> parse_logical_and_expression {}",
       self.current_token.kind
@@ -186,7 +306,7 @@ impl<'a> Parser<'a> {
     Ok(self.binary_operation(&e, BinaryOperator::AND, &right))
   }
 
-  fn parse_logical_not_expression(&mut self) -> Result<Expression, Errors> {
+  fn parse_logical_not_expression(&mut self) -> Result<Expression, ParseError> {
     debug!(
       ">>> parse_logical_not_expression {}",
       self.current_token.kind
@@ -199,7 +319,7 @@ impl<'a> Parser<'a> {
     Ok(self.unary_operation(UnaryOperator::NOT, &e))
   }
 
-  fn parse_equality_expression(&mut self) -> Result<Expression, Errors> {
+  fn parse_equality_expression(&mut self) -> Result<Expression, ParseError> {
     debug!(">>> parse_equality_expression {}", self.current_token.kind);
     let e = self.parse_additive_expression()?;
     let op;
@@ -217,7 +337,7 @@ impl<'a> Parser<'a> {
     Ok(self.binary_operation(&e, op, &right))
   }
 
-  fn parse_additive_expression(&mut self) -> Result<Expression, Errors> {
+  fn parse_additive_expression(&mut self) -> Result<Expression, ParseError> {
     debug!(">>> parse_additive_expression {}", self.current_token.kind);
     let e = self.parse_multiplicative_expression()?;
     let op;
@@ -231,7 +351,7 @@ impl<'a> Parser<'a> {
     Ok(self.binary_operation(&e, op, &right))
   }
 
-  fn parse_multiplicative_expression(&mut self) -> Result<Expression, Errors> {
+  fn parse_multiplicative_expression(&mut self) -> Result<Expression, ParseError> {
     debug!(
       ">>> parse_multiplicative_expression {}",
       self.current_token.kind
@@ -249,7 +369,7 @@ impl<'a> Parser<'a> {
     Ok(self.binary_operation(&e, op, &right))
   }
 
-  fn parse_unary_expression(&mut self) -> Result<Expression, Errors> {
+  fn parse_unary_expression(&mut self) -> Result<Expression, ParseError> {
     debug!(">>> parse_unary_expression {}", self.current_token.kind);
     let op;
     match self.current_token.kind {
@@ -264,7 +384,7 @@ impl<'a> Parser<'a> {
     Ok(self.unary_operation(op, &e))
   }
 
-  fn parse_exponential_expression(&mut self) -> Result<Expression, Errors> {
+  fn parse_exponential_expression(&mut self) -> Result<Expression, ParseError> {
     debug!(
       ">>> parse_exponential_expression {}",
       self.current_token.kind
@@ -278,13 +398,21 @@ impl<'a> Parser<'a> {
     Ok(self.binary_operation(&e, BinaryOperator::EXPOTENTIAL, &right))
   }
 
-  fn parse_primary(&mut self) -> Result<Expression, Errors> {
+  fn parse_primary(&mut self) -> Result<Expression, ParseError> {
     debug!(">>> parse_primary {}", self.current_token.kind);
     let e = match self.current_token.kind {
       TokenKind::IDENT => Expression::Identifier(self.current_token.value.clone()),
       TokenKind::INT => Expression::Integer(self.current_token.value.parse::<i32>().unwrap()),
       TokenKind::LPAREN => self.parse_grouped_expression()?,
-      _ => return Err(Errors::TokenInvalid(self.current_token.clone())),
+      _ => {
+        return Err(self.raise_error(
+          ParseErrorType::InvalidToken,
+          format!(
+            "Expected IDENT, INT, LPAREN, but {}",
+            self.current_token.kind
+          ),
+        ))
+      }
     };
     self.next_token();
     Ok(e)
@@ -310,14 +438,28 @@ impl<'a> Parser<'a> {
     }
   }
 
-  fn parse_grouped_expression(&mut self) -> Result<Expression, Errors> {
+  fn parse_grouped_expression(&mut self) -> Result<Expression, ParseError> {
     debug!(">>> parse_grouped_expression");
     self.next_token();
     let e = self.parse_expression()?;
     if self.current_token.kind == TokenKind::RPAREN {
       Ok(e)
     } else {
-      Err(Errors::TokenInvalid(self.current_token.clone()))
+      Err(self.raise_error(
+        ParseErrorType::InvalidToken,
+        format!("Expected RPAREN, but {}", self.current_token.kind),
+      ))
+    }
+  }
+
+  fn raise_error(&mut self, error_type: ParseErrorType, error_message: String) -> ParseError {
+    debug!(">>> raise_error: {},{}", error_type, error_message);
+    ParseError {
+      error_type,
+      error_message,
+      file_name: self.current_token.file_name.clone(),
+      line: self.current_token.line,
+      column: self.current_token.column,
     }
   }
 

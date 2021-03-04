@@ -57,6 +57,33 @@ impl Executor {
         identifier,
         arguments,
       } => self.execute_method(identifier, &arguments),
+      Statement::IfStatement {
+        if_blocks,
+        else_statements,
+      } => {
+        for (c, b) in if_blocks {
+          let e = self.execute_expression(c)?;
+          match e {
+            Object::Boolean(true) => {
+              for s in b {
+                self.execute_statement(s)?;
+              }
+              return Ok(Object::Undefined);
+            }
+            Object::Boolean(false) => {}
+            a => {
+              return Err(RuntimeError::TypeMismatch {
+                expected: RuntimeType::Boolean,
+                actual: a.type_of(),
+              })
+            }
+          }
+        }
+        for s in else_statements {
+          self.execute_statement(s)?;
+        }
+        return Ok(Object::Undefined);
+      }
       Statement::Empty => Ok(Object::Undefined),
     }
   }

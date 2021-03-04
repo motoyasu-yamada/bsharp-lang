@@ -3,7 +3,6 @@ use std::fmt;
 #[derive(Debug, Eq, PartialEq, Clone, Copy, Hash, Ord, PartialOrd)]
 pub enum TokenKind {
   ILLEGAL,
-  DEFAULT,
   EOF,
   EOL,
   COMMA,

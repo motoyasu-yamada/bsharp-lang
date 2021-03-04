@@ -1,19 +1,20 @@
 mod ast;
-mod errors;
 mod executor;
+mod input_stream;
 mod keywords;
 mod lexer;
 mod object;
+mod parse_error;
 mod parser;
 mod runtime_error;
 mod token;
 mod token_kind;
-
 extern crate log;
 use env_logger;
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
+
 fn main() {
   env::set_var("RUST_LOG", "debug");
   env_logger::init();
@@ -29,7 +30,8 @@ fn main() {
     .expect("something went wrong reading the file");
   println!("Sourcecode:\n\n{}", contents);
   let mut e = executor::Executor::new();
-  let l = lexer::Lexer::new(&contents);
+  let i = input_stream::InputStream::new(&contents, String::from(src));
+  let l = lexer::Lexer::new(i);
   let mut parser = parser::Parser::new(l);
   let program = parser.parse_program();
   match program {

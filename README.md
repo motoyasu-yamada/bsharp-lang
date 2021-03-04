@@ -21,6 +21,14 @@ This ***B#(b-sharp)*** is an original programming language written in Rust. This
 ### Test run
 `cargo run samples/test.bs`
 
+## TODO
+- IF ELSE 構文のサポート
+- キーワードのマッチング方法(全部小文字でチェックする)
+- エラーメッセージをわかりやすく
+- 文字列出力のサポート
+- FOR
+- FIZZBUZZ
+
 ## 引用
 - VBA構文: https://docs.microsoft.com/ja-jp/office/vba/api/overview/language-reference
 - Java BNF: https://users-cs.au.dk/amoeller/RegAut/JavaBNF.html

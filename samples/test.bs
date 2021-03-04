@@ -1,3 +1,9 @@
 Const a = 1 + 2
 Const b = a * (a + 1 * 2 + 2 - 1 * 4)
-Print (b, b<>a,b=a)
+Let c = x
+Print (b, a = 3)
+If a = 3 Then
+  Print (a)
+Else
+  Print (b)
+End If

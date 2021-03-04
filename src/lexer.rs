@@ -1,188 +1,115 @@
+use super::input_stream::InputStream;
 use super::keywords::get_keyword;
 use super::token::Token;
 use super::token_kind::TokenKind;
 
 pub struct Lexer<'a> {
-  input: &'a str,
-  position: usize,
-  read_position: usize,
-  // current_line: usize,
-  // current_column: usize,
-  ch: u8,
+  input_stream: InputStream<'a>,
 }
 
 impl<'a> Lexer<'a> {
-  pub fn new(input: &'a str) -> Self {
-    let mut l = Lexer {
-      input,
-      position: 0,
-      read_position: 0,
-      ch: 0,
-    };
-    l.read_char();
-    return l;
-  }
-
-  pub fn new_token(kind: TokenKind, ch: u8) -> Token {
-    Token {
-      kind,
-      value: String::from_utf8(vec![ch]).unwrap(),
-    }
+  pub fn new(input_stream: InputStream<'a>) -> Self {
+    Lexer { input_stream }
   }
 
   pub fn next_token(&mut self) -> Token {
     self.skip_whitespace();
     let token;
-    match self.ch {
+    match self.input_stream.current() {
       b'\r' => {
-        self.read_char();
-        if self.ch == b'\n' {
-          token = Token {
-            kind: TokenKind::EOL,
-            value: "\r\n".to_string(),
-          }
+        if self.input_stream.prefetch() == b'\n' {
+          token = self.new_token_with_2(TokenKind::EOL)
         } else {
-          return Self::new_token(TokenKind::EOL, b'\r');
+          token = self.new_token_with_1(TokenKind::EOL);
         }
       }
-      b'\n' => token = Self::new_token(TokenKind::EOL, self.ch),
-      b',' => token = Self::new_token(TokenKind::COMMA, self.ch),
-      b'*' => token = Self::new_token(TokenKind::ASTERISK, self.ch),
-      b'%' => token = Self::new_token(TokenKind::PERCENT, self.ch),
-      b'/' => {
-        token = Self::new_token(TokenKind::SLASH, self.ch);
-      }
-      b'+' => {
-        token = Self::new_token(TokenKind::PLUS, self.ch);
-      }
-      b'-' => {
-        token = Self::new_token(TokenKind::MINUS, self.ch);
-      }
-      b'(' => {
-        token = Self::new_token(TokenKind::LPAREN, self.ch);
-      }
-      b')' => {
-        token = Self::new_token(TokenKind::RPAREN, self.ch);
-      }
-      b'=' => {
-        token = Self::new_token(TokenKind::ASSIGN, self.ch);
-      }
-      b'^' => {
-        token = Self::new_token(TokenKind::HAT, self.ch);
-      }
-      b'<' => match self.prefetch_char() {
-        b'>' => {
-          self.read_char();
-          token = Token {
-            kind: TokenKind::NE,
-            value: "<>".to_string(),
-          }
-        }
-        b'=' => {
-          self.read_char();
-          token = Token {
-            kind: TokenKind::LE,
-            value: "<=".to_string(),
-          }
-        }
-        _ => {
-          token = Self::new_token(TokenKind::LT, self.ch);
-        }
+      b'\n' => token = self.new_token_with_1(TokenKind::EOL),
+      b',' => token = self.new_token_with_1(TokenKind::COMMA),
+      b'*' => token = self.new_token_with_1(TokenKind::ASTERISK),
+      b'%' => token = self.new_token_with_1(TokenKind::PERCENT),
+      b'/' => token = self.new_token_with_1(TokenKind::SLASH),
+      b'+' => token = self.new_token_with_1(TokenKind::PLUS),
+      b'-' => token = self.new_token_with_1(TokenKind::MINUS),
+      b'(' => token = self.new_token_with_1(TokenKind::LPAREN),
+      b')' => token = self.new_token_with_1(TokenKind::RPAREN),
+      b'=' => token = self.new_token_with_1(TokenKind::ASSIGN),
+      b'^' => token = self.new_token_with_1(TokenKind::HAT),
+      b'<' => match self.input_stream.prefetch() {
+        b'>' => token = self.new_token_with_2(TokenKind::NE),
+        b'=' => token = self.new_token_with_2(TokenKind::LE),
+        _ => token = self.new_token_with_1(TokenKind::LT),
       },
-      b'>' => match self.prefetch_char() {
-        b'=' => {
-          self.read_char();
-          token = Token {
-            kind: TokenKind::GE,
-            value: "<=".to_string(),
-          }
-        }
-        _ => {
-          token = Self::new_token(TokenKind::GT, self.ch);
-        }
+      b'>' => match self.input_stream.prefetch() {
+        b'=' => token = self.new_token_with_2(TokenKind::GE),
+        _ => token = self.new_token_with_1(TokenKind::GT),
       },
-      b'"' => {
-        token = Token {
-          kind: TokenKind::STRING,
-          value: self.read_string(),
-        }
-      }
-      0 => {
-        token = Token {
-          kind: TokenKind::EOF,
-          value: String::from(""),
-        }
-      }
-      _ => {
-        if Self::is_letter(&self.ch) {
+      b'"' => token = self.parse_string(),
+      0 => token = self.new_token(TokenKind::EOF, String::from("")),
+      c => {
+        if Self::is_letter(&c) {
           let ident = self.read_identifier();
           let kind = get_keyword(&ident);
-          token = Token { kind, value: ident };
-          return token;
-        } else if Self::is_digit(&self.ch) {
-          token = Token {
-            kind: TokenKind::INT,
-            value: self.read_number(),
-          };
-          return token;
+          return self.new_token(kind, ident);
+        } else if Self::is_digit(&c) {
+          let literal = self.read_number();
+          return self.new_token(TokenKind::INT, literal);
         } else {
-          token = Self::new_token(TokenKind::ILLEGAL, self.ch);
+          token = self.new_token_with_1(TokenKind::ILLEGAL);
         }
       }
     };
-    self.read_char();
-    return token;
+    self.input_stream.next();
+    token
   }
 
   fn skip_whitespace(&mut self) {
-    while self.ch == b' ' || self.ch == b'\t' {
-      self.read_char();
+    loop {
+      let c = self.input_stream.current();
+      if !(c == b' ' || c == b'\t') {
+        break;
+      }
+      self.input_stream.next();
     }
-  }
-
-  fn prefetch_char(&mut self) -> u8 {
-    if self.read_position >= self.input.len() {
-      return 0;
-    } else {
-      return self.input.as_bytes()[self.read_position];
-    }
-  }
-
-  fn read_char(&mut self) {
-    if self.read_position >= self.input.len() {
-      self.ch = 0;
-    } else {
-      self.ch = self.input.as_bytes()[self.read_position];
-    }
-    self.position = self.read_position;
-    self.read_position += 1;
   }
 
   fn read_identifier(&mut self) -> String {
-    let start = self.position;
-    while Self::is_digit(&self.ch) || Self::is_letter(&self.ch) {
-      self.read_char();
-    }
-    self.input.get(start..self.position).unwrap().to_string()
-  }
-
-  fn read_string(&mut self) -> String {
-    let position = self.position + 1;
+    self.input_stream.start_range();
     loop {
-      self.read_char();
-      if self.ch == b'"' || self.ch == 0 {
+      let c = self.input_stream.current();
+      if !(Self::is_digit(&c) || Self::is_letter(&c)) {
         break;
       }
+      self.input_stream.next();
     }
-    return self.input[position..self.position].to_string();
+    self.input_stream.range_to_string()
+  }
+
+  fn parse_string(&mut self) -> Token {
+    self.input_stream.next();
+    self.input_stream.start_range();
+    loop {
+      let c = self.input_stream.current();
+      if c == b'"' {
+        break;
+      }
+      if c == 0 {
+        return self.new_token_with_1(TokenKind::ILLEGAL);
+      }
+      self.input_stream.next();
+    }
+    self.new_token_by_range(TokenKind::STRING)
   }
 
   fn read_number(&mut self) -> String {
-    let start = self.position;
-    while Self::is_digit(&self.ch) {
-      self.read_char();
+    self.input_stream.start_range();
+    loop {
+      let c = self.input_stream.current();
+      if !Self::is_digit(&c) {
+        break;
+      }
+      self.input_stream.next();
     }
-    self.input.get(start..self.position).unwrap().to_string()
+    self.input_stream.range_to_string()
   }
 
   fn is_letter(ch: &u8) -> bool {
@@ -193,5 +120,32 @@ impl<'a> Lexer<'a> {
   fn is_digit(ch: &u8) -> bool {
     let ch = char::from(*ch);
     return '0' <= ch && ch <= '9';
+  }
+
+  fn new_token(&self, kind: TokenKind, value: String) -> Token {
+    let (file_name, line, column) = self.input_stream.current_location();
+
+    Token {
+      kind,
+      value,
+      file_name,
+      line,
+      column,
+    }
+  }
+
+  fn new_token_with_1(&mut self, kind: TokenKind) -> Token {
+    let value = self.input_stream.current_to_string();
+    self.new_token(kind, value)
+  }
+
+  fn new_token_with_2(&mut self, kind: TokenKind) -> Token {
+    let value = self.input_stream.current_2_to_string();
+    self.new_token(kind, value)
+  }
+
+  fn new_token_by_range(&mut self, kind: TokenKind) -> Token {
+    let value = self.input_stream.range_to_string();
+    self.new_token(kind, value)
   }
 }
