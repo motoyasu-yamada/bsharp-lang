@@ -1,6 +1,7 @@
 use std::fmt;
 
 #[derive(Debug, PartialEq)]
+#[allow(dead_code)]
 pub enum ParseErrorType {
   InvalidToken,
   Unsupported,

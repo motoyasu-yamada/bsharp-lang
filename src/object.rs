@@ -1,3 +1,4 @@
+use super::runtime_error::RuntimeError;
 use std::fmt;
 
 #[derive(Debug, PartialEq)]
@@ -14,6 +15,10 @@ impl fmt::Display for RuntimeType {
 
 pub trait TypeOf {
   fn type_of(&self) -> RuntimeType;
+}
+
+pub trait Add {
+  fn add(&self, offset: i32) -> Result<Object, RuntimeError>;
 }
 
 #[derive(Debug, Clone)]
@@ -37,6 +42,18 @@ impl TypeOf for Object {
       Object::Undefined => RuntimeType::Undefined,
       Object::Integer(_) => RuntimeType::Integer,
       Object::Boolean(_) => RuntimeType::Boolean,
+    }
+  }
+}
+impl Add for Object {
+  fn add(&self, offset: i32) -> Result<Object, RuntimeError> {
+    let actual = self.type_of();
+    match self {
+      Object::Integer(n) => Ok(Object::Integer(n + offset)),
+      _ => Err(RuntimeError::TypeMismatch {
+        expected: RuntimeType::Integer,
+        actual,
+      }),
     }
   }
 }

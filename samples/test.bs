@@ -7,3 +7,15 @@ If a = 3 Then
 Else
   Print (b)
 End If
+
+For i As Integer = 1 To 100
+    If i mod 15 = 0 Then
+        Print("FizzBuzz ")
+    Else If i mod 5 = 0 Then
+        Print("Buzz ")
+    Else If i mod 3 = 0 Then
+        Print("Fizz ")
+    Else
+        Print(i)
+    End If
+Next

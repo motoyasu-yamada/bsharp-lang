@@ -19,6 +19,12 @@ pub enum Statement {
     if_blocks: Vec<(Expression, Vec<Statement>)>,
     else_statements: Vec<Statement>,
   },
+  ForStatement {
+    loop_counter: String,
+    loop_counter_from: Expression,
+    loop_counter_to: Expression,
+    block: Vec<Statement>,
+  },
   Empty,
 }
 impl fmt::Display for Statement {
@@ -36,6 +42,22 @@ impl fmt::Display for Statement {
         identifier,
         arguments,
       } => write!(f, "{}({:?})", identifier, arguments)?,
+      Statement::ForStatement {
+        loop_counter,
+        loop_counter_from,
+        loop_counter_to,
+        block,
+      } => {
+        writeln!(
+          f,
+          "For {} = {} To {}",
+          loop_counter, loop_counter_from, loop_counter_to
+        )?;
+        for s in block {
+          writeln!(f, "{}", s)?;
+        }
+        writeln!(f, "Next")?;
+      }
       Statement::IfStatement {
         if_blocks,
         else_statements,

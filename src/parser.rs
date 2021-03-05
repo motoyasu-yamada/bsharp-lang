@@ -171,10 +171,59 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_for_statement(&mut self) -> Result<Statement, ParseError> {
-    return Err(self.raise_error(
-      ParseErrorType::Unsupported,
-      format!("For statement is not supported."),
-    ));
+    debug!(">>> parse_for_statement {}", self.current_token.kind);
+
+    let to_stop: fn(&TokenKind) -> bool = |k| *k == TokenKind::NEXT;
+    if self.current_token.kind != TokenKind::FOR {
+      return Err(self.raise_error(
+        ParseErrorType::InvalidToken,
+        format!("Expected For, but {}", self.current_token.kind),
+      ));
+    }
+    self.next_token();
+    if self.current_token.kind != TokenKind::IDENT {
+      return Err(self.raise_error(
+        ParseErrorType::InvalidToken,
+        format!("Expected Ident, but {}", self.current_token.kind),
+      ));
+    }
+    let loop_counter = self.current_token.value.clone();
+    self.next_token();
+    if self.current_token.kind != TokenKind::ASSIGN {
+      return Err(self.raise_error(
+        ParseErrorType::InvalidToken,
+        format!("Expected '=', but {}", self.current_token.kind),
+      ));
+    }
+    let loop_counter_from = self.parse_expression()?;
+    if self.current_token.kind != TokenKind::TO {
+      return Err(self.raise_error(
+        ParseErrorType::InvalidToken,
+        format!("Expected To, but {}", self.current_token.kind),
+      ));
+    }
+    self.next_token();
+    let loop_counter_to = self.parse_expression()?;
+    if self.current_token.kind != TokenKind::EOL {
+      return Err(self.raise_error(
+        ParseErrorType::InvalidToken,
+        format!("Expected EOL, but {}", self.current_token.kind),
+      ));
+    }
+    self.next_token();
+    let block: Vec<Statement> = self.parse_statements(to_stop)?;
+    if self.current_token.kind != TokenKind::NEXT {
+      return Err(self.raise_error(
+        ParseErrorType::InvalidToken,
+        format!("Expected Next, but {}", self.current_token.kind),
+      ));
+    }
+    Ok(Statement::ForStatement {
+      loop_counter,
+      loop_counter_from,
+      loop_counter_to,
+      block,
+    })
   }
 
   /*

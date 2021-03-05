@@ -1,7 +1,7 @@
 use super::ast::{
   expression::Expression, program::Program, statement::Statement, BinaryOperator, UnaryOperator,
 };
-use super::object::{Object, RuntimeType, TypeOf};
+use super::object::{Add, Object, RuntimeType, TypeOf};
 use super::runtime_error::RuntimeError;
 use log::debug;
 use std::collections::BTreeMap;
@@ -43,6 +43,13 @@ impl Executor {
     }
   }
 
+  fn execute_statements(&mut self, statements: &Vec<Statement>) -> Result<Object, RuntimeError> {
+    for s in statements {
+      self.execute_statement(s)?;
+    }
+    Ok(Object::Undefined)
+  }
+
   fn execute_statement(&mut self, statement: &Statement) -> Result<Object, RuntimeError> {
     match statement {
       Statement::Declaration {
@@ -57,6 +64,39 @@ impl Executor {
         identifier,
         arguments,
       } => self.execute_method(identifier, &arguments),
+      Statement::ForStatement {
+        loop_counter,
+        loop_counter_from,
+        loop_counter_to,
+        block,
+      } => {
+        let mut counter = self.execute_expression(loop_counter_from)?;
+        self.set_variable(loop_counter.to_owned(), &counter);
+        loop {
+          let to_value = self.execute_expression(loop_counter_to)?;
+          let exit = match (counter, to_value) {
+            (Object::Integer(l), Object::Integer(r)) => r < l,
+            _ => {
+              return Err(RuntimeError::TypeMismatch {
+                expected: RuntimeType::Integer,
+                actual: RuntimeType::Integer, // to_value.type_of(),
+              });
+            }
+          };
+          if exit {
+            break;
+          }
+          self.execute_statements(block)?;
+
+          counter = match self.get_variable(loop_counter) {
+            Some(v) => v,
+            None => return Err(RuntimeError::UndefinedVariable(loop_counter.to_string())),
+          };
+          counter = counter.add(1)?;
+          self.set_variable(loop_counter.to_owned(), &counter);
+        }
+        return Ok(Object::Undefined);
+      }
       Statement::IfStatement {
         if_blocks,
         else_statements,
