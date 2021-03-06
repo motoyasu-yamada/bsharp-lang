@@ -22,12 +22,13 @@ This ***B#(b-sharp)*** is an original programming language written in Rust. This
 `cargo run samples/test.bs`
 
 ## TODO
-- IF ELSE 構文のサポート
+-[*] IF ELSE 構文のサポート
+-[*] FOR構文のサポート
+-[*] 文字列出力のサポート
+-[*] エラーメッセージをわかりやすく
+-[*] FIZZBUZZ
+
 - キーワードのマッチング方法(全部小文字でチェックする)
-- エラーメッセージをわかりやすく
-- 文字列出力のサポート
-- FOR
-- FIZZBUZZ
 
 ## 引用
 - VBA構文: https://docs.microsoft.com/ja-jp/office/vba/api/overview/language-reference

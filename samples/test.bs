@@ -1,6 +1,5 @@
 Const a = 1 + 2
 Const b = a * (a + 1 * 2 + 2 - 1 * 4)
-Let c = x
 Print (b, a = 3)
 If a = 3 Then
   Print (a)
@@ -8,12 +7,12 @@ Else
   Print (b)
 End If
 
-For i As Integer = 1 To 100
-    If i mod 15 = 0 Then
+For i = 1 To 100
+    If i Mod 15 = 0 Then
         Print("FizzBuzz ")
-    Else If i mod 5 = 0 Then
+    Else If i Mod 5 = 0 Then
         Print("Buzz ")
-    Else If i mod 3 = 0 Then
+    Else If i Mod 3 = 0 Then
         Print("Fizz ")
     Else
         Print(i)

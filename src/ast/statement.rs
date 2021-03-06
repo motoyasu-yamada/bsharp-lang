@@ -33,15 +33,15 @@ impl fmt::Display for Statement {
       Statement::Declaration {
         identifier,
         expression,
-      } => write!(f, "Const {} = {}", identifier, expression)?,
+      } => writeln!(f, "Const {} = {}", identifier, expression)?,
       Statement::Assignment {
         identifier,
         expression,
-      } => write!(f, "{} = {}", identifier, expression)?,
+      } => writeln!(f, "{} = {}", identifier, expression)?,
       Statement::MethodInvocation {
         identifier,
         arguments,
-      } => write!(f, "{}({:?})", identifier, arguments)?,
+      } => writeln!(f, "{}({:?})", identifier, arguments)?,
       Statement::ForStatement {
         loop_counter,
         loop_counter_from,

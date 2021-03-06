@@ -39,7 +39,10 @@ impl<'a> Parser<'a> {
     loop {
       debug!("parse_statements:loop {:?}", self.current_token);
       if to_stop(&self.current_token.kind) {
-        debug!("Break");
+        debug!(
+          "parse_statements: stopeed with: {}",
+          self.current_token.kind
+        );
         break;
       }
       let s = self.parse_statement()?;
@@ -132,6 +135,7 @@ impl<'a> Parser<'a> {
       }
       self.next_token();
       if self.current_token.kind == TokenKind::IF {
+        self.next_token();
         let c = self.parse_expression()?;
         if self.current_token.kind != TokenKind::THEN {
           return Err(self.raise_error(
@@ -180,6 +184,7 @@ impl<'a> Parser<'a> {
         format!("Expected For, but {}", self.current_token.kind),
       ));
     }
+
     self.next_token();
     if self.current_token.kind != TokenKind::IDENT {
       return Err(self.raise_error(
@@ -189,12 +194,14 @@ impl<'a> Parser<'a> {
     }
     let loop_counter = self.current_token.value.clone();
     self.next_token();
+    debug!("*** loop_counter {},{:?}", loop_counter, self.current_token);
     if self.current_token.kind != TokenKind::ASSIGN {
       return Err(self.raise_error(
         ParseErrorType::InvalidToken,
         format!("Expected '=', but {}", self.current_token.kind),
       ));
     }
+    self.next_token();
     let loop_counter_from = self.parse_expression()?;
     if self.current_token.kind != TokenKind::TO {
       return Err(self.raise_error(
@@ -218,6 +225,7 @@ impl<'a> Parser<'a> {
         format!("Expected Next, but {}", self.current_token.kind),
       ));
     }
+    self.next_token();
     Ok(Statement::ForStatement {
       loop_counter,
       loop_counter_from,
@@ -411,6 +419,7 @@ impl<'a> Parser<'a> {
       TokenKind::ASTERISK => op = BinaryOperator::MUL,
       TokenKind::SLASH => op = BinaryOperator::DIV,
       TokenKind::PERCENT => op = BinaryOperator::MOD,
+      TokenKind::MOD => op = BinaryOperator::MOD,
       _ => return Ok(e),
     }
     self.next_token();
@@ -452,6 +461,7 @@ impl<'a> Parser<'a> {
     let e = match self.current_token.kind {
       TokenKind::IDENT => Expression::Identifier(self.current_token.value.clone()),
       TokenKind::INT => Expression::Integer(self.current_token.value.parse::<i32>().unwrap()),
+      TokenKind::STRING => Expression::String(self.current_token.value.clone()),
       TokenKind::LPAREN => self.parse_grouped_expression()?,
       _ => {
         return Err(self.raise_error(

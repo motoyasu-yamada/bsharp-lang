@@ -162,6 +162,7 @@ impl Executor {
         _ => Ok(Object::Undefined),
       },
       Expression::Integer(value) => Ok(Object::Integer(*value)),
+      Expression::String(value) => Ok(Object::String(value.clone())),
       Expression::Binary {
         left,
         operator,

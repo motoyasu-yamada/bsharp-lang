@@ -13,7 +13,7 @@ pub fn get_keyword(ident: &str) -> TokenKind {
     "Then" => TokenKind::THEN,
     "Else" => TokenKind::ELSE,
     "End" => TokenKind::END,
-    "FOR" => TokenKind::FOR,
+    "For" => TokenKind::FOR,
     "To" => TokenKind::TO,
     "Next" => TokenKind::NEXT,
     _ => TokenKind::IDENT,

@@ -5,6 +5,7 @@ use std::fmt;
 pub enum RuntimeType {
   Integer,
   Boolean,
+  String,
   Undefined,
 }
 impl fmt::Display for RuntimeType {
@@ -26,6 +27,7 @@ pub enum Object {
   Undefined,
   Integer(i32),
   Boolean(bool),
+  String(String),
 }
 impl fmt::Display for Object {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -33,6 +35,7 @@ impl fmt::Display for Object {
       Object::Undefined => write!(f, "Undefined"),
       Object::Integer(v) => write!(f, "Integer({})", v),
       Object::Boolean(b) => write!(f, "Boolean({})", b),
+      Object::String(s) => write!(f, "String(\"{}\")", s),
     }
   }
 }
@@ -42,6 +45,7 @@ impl TypeOf for Object {
       Object::Undefined => RuntimeType::Undefined,
       Object::Integer(_) => RuntimeType::Integer,
       Object::Boolean(_) => RuntimeType::Boolean,
+      Object::String(_) => RuntimeType::String,
     }
   }
 }
