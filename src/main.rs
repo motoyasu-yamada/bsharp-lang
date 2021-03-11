@@ -10,13 +10,14 @@ mod runtime_error;
 mod token;
 mod token_kind;
 extern crate log;
+mod context;
 use env_logger;
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 
 fn main() {
-  env::set_var("RUST_LOG", "info");
+  env::set_var("RUST_LOG", "debug");
   env_logger::init();
 
   let args: Vec<String> = env::args().collect();

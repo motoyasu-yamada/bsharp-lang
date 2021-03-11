@@ -1,52 +1,47 @@
 use super::ast::{
-  expression::Expression, program::Program, statement::Statement, BinaryOperator, UnaryOperator,
+  expression::Expression, operator::BinaryOperator, operator::UnaryOperator, program::Program,
+  statement::Statement,
 };
+use super::context::Context;
 use super::object::{Add, Object, RuntimeType, TypeOf};
 use super::runtime_error::RuntimeError;
 use log::debug;
-use std::collections::BTreeMap;
+use std::rc::Rc;
 
 pub struct Executor {
-  variables: BTreeMap<String, Object>,
+  context: Context,
 }
 
 impl Executor {
-  pub fn new() -> Executor {
+  pub fn new() -> Self {
     return Executor {
-      variables: BTreeMap::new(),
+      context: Context::new_root(),
     };
   }
+
   pub fn execute(&mut self, program: &Program) -> Result<Object, RuntimeError> {
+    debug!("[Executor] >>>execute");
+    for f in program.functions.iter() {
+      self
+        .context
+        .declare_variable(&f.identifier, &Object::Function(Rc::new(f.clone())))?;
+    }
+
     let mut r = Object::Undefined;
     for s in program.statements.iter() {
       r = self.execute_statement(s)?;
       debug!("Statement: {}", r);
     }
+    debug!("[Executor] <<<execute: {}", r);
     Ok(r)
   }
 
-  pub fn set_variable(&mut self, name: String, value: &Object) {
-    debug!("set_variable: {}={}", name, value);
-    self.variables.insert(name, value.clone());
-  }
-
-  pub fn get_variable(&mut self, name: &str) -> Option<Object> {
-    match self.variables.get(name) {
-      Some(value) => {
-        debug!("get_variable: {}: {}", name, value);
-        Some(value.clone())
-      }
-      None => {
-        debug!("get_variable: {}: None", name);
-        None
-      }
-    }
-  }
-
   fn execute_statements(&mut self, statements: &Vec<Statement>) -> Result<Object, RuntimeError> {
+    debug!("[Executor] >>>execute_statements");
     for s in statements {
       self.execute_statement(s)?;
     }
+    debug!("[Executor] <<<execute_statements");
     Ok(Object::Undefined)
   }
 
@@ -55,11 +50,11 @@ impl Executor {
       Statement::Declaration {
         identifier,
         expression,
-      } => self.execute_const_assignment(identifier.to_string(), &expression),
+      } => self.execute_const_assignment(identifier, &expression),
       Statement::Assignment {
         identifier,
         expression,
-      } => self.execute_const_assignment(identifier.to_string(), &expression),
+      } => self.execute_const_assignment(identifier, &expression),
       Statement::MethodInvocation {
         identifier,
         arguments,
@@ -71,7 +66,7 @@ impl Executor {
         block,
       } => {
         let mut counter = self.execute_expression(loop_counter_from)?;
-        self.set_variable(loop_counter.to_owned(), &counter);
+        self.context.declare_variable(loop_counter, &counter)?;
         loop {
           let to_value = self.execute_expression(loop_counter_to)?;
           let exit = match (counter, to_value) {
@@ -88,12 +83,9 @@ impl Executor {
           }
           self.execute_statements(block)?;
 
-          counter = match self.get_variable(loop_counter) {
-            Some(v) => v,
-            None => return Err(RuntimeError::UndefinedVariable(loop_counter.to_string())),
-          };
+          counter = self.context.get_variable(loop_counter)?;
           counter = counter.add(1)?;
-          self.set_variable(loop_counter.to_owned(), &counter);
+          self.context.set_variable(loop_counter, &counter)?;
         }
         return Ok(Object::Undefined);
       }
@@ -130,39 +122,75 @@ impl Executor {
 
   fn execute_method(
     &mut self,
-    identifier: &str,
+    identifier: &String,
     arguments: &Vec<Expression>,
   ) -> Result<Object, RuntimeError> {
-    match identifier {
-      "Print" => {
-        for a in arguments {
-          let evaluated = self.execute_expression(a)?;
-          println!("{}", evaluated);
-        }
-        Ok(Object::Undefined)
-      }
-      _ => Err(RuntimeError::UnknownMethod(identifier.to_string())),
+    debug!("[Executor] >>>execute_method: {}", identifier);
+    let mut evaluated_arguments: Vec<Object> = vec![];
+    for a in arguments {
+      let e = self.execute_expression(a)?;
+      evaluated_arguments.push(e)
     }
+
+    let r = match identifier.as_str() {
+      "Print" => {
+        for a in evaluated_arguments {
+          print!("{}", a);
+        }
+        println!("");
+        Object::Undefined
+      }
+      _ => match self.context.get_variable(identifier)? {
+        Object::Function(f) => {
+          self.context.new_stack();
+          if evaluated_arguments.len() != f.arguments.len() {
+            return Err(RuntimeError::ArgumentMismatch(identifier.to_string()));
+          }
+          for i in 0..evaluated_arguments.len() {
+            let an = &f.arguments[i];
+            let av = &evaluated_arguments[i];
+            self.context.declare_variable(an, av)?;
+          }
+          self
+            .context
+            .declare_variable(identifier, &Object::Undefined)?;
+          self.execute_statements(&f.statements)?;
+          let r = self.context.get_variable(identifier)?;
+          self.context.pop_stack();
+          r
+        }
+        value => {
+          return Err(RuntimeError::NonFunctionObjectIsInvoked(
+            identifier.to_string(),
+            value,
+          ))
+        }
+      },
+    };
+
+    debug!("[Executor] <<<execute_method: {}: {}", identifier, r);
+    Ok(r)
   }
 
   fn execute_const_assignment(
     &mut self,
-    identifier: String,
+    identifier: &String,
     expression: &Expression,
   ) -> Result<Object, RuntimeError> {
     let evaluated = self.execute_expression(expression)?;
-    self.set_variable(identifier.to_owned(), &evaluated);
+    self.context.declare_variable(identifier, &evaluated)?;
     Ok(evaluated)
   }
 
   fn execute_expression(&mut self, expression: &Expression) -> Result<Object, RuntimeError> {
     match expression {
-      Expression::Identifier(name) => match self.get_variable(name) {
-        Some(value) => Ok(value),
-        _ => Ok(Object::Undefined),
-      },
+      Expression::Identifier(name) => self.context.get_variable(name),
       Expression::Integer(value) => Ok(Object::Integer(*value)),
       Expression::String(value) => Ok(Object::String(value.clone())),
+      Expression::FunctionInvocation {
+        identifier,
+        arguments,
+      } => self.execute_method(identifier, arguments),
       Expression::Binary {
         left,
         operator,

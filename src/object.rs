@@ -1,11 +1,14 @@
+use super::ast::function::FunctionDeclaration;
 use super::runtime_error::RuntimeError;
 use std::fmt;
+use std::rc::Rc;
 
 #[derive(Debug, PartialEq)]
 pub enum RuntimeType {
   Integer,
   Boolean,
   String,
+  Function,
   Undefined,
 }
 impl fmt::Display for RuntimeType {
@@ -22,20 +25,22 @@ pub trait Add {
   fn add(&self, offset: i32) -> Result<Object, RuntimeError>;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Object {
   Undefined,
   Integer(i32),
   Boolean(bool),
   String(String),
+  Function(Rc<FunctionDeclaration>),
 }
 impl fmt::Display for Object {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+  fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      Object::Undefined => write!(f, "Undefined"),
-      Object::Integer(v) => write!(f, "Integer({})", v),
-      Object::Boolean(b) => write!(f, "Boolean({})", b),
-      Object::String(s) => write!(f, "String(\"{}\")", s),
+      Object::Undefined => write!(fmt, "Undefined"),
+      Object::Integer(v) => write!(fmt, "Integer({})", v),
+      Object::Boolean(b) => write!(fmt, "Boolean({})", b),
+      Object::String(s) => write!(fmt, "String(\"{}\")", s),
+      Object::Function(f) => write!(fmt, "Function(\"{}\")", f),
     }
   }
 }
@@ -46,6 +51,7 @@ impl TypeOf for Object {
       Object::Integer(_) => RuntimeType::Integer,
       Object::Boolean(_) => RuntimeType::Boolean,
       Object::String(_) => RuntimeType::String,
+      Object::Function(_) => RuntimeType::Function,
     }
   }
 }

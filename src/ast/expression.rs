@@ -1,4 +1,4 @@
-use super::{BinaryOperator, UnaryOperator};
+use super::operator::{BinaryOperator, UnaryOperator};
 use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -6,6 +6,10 @@ pub enum Expression {
   Identifier(String),
   String(String),
   Integer(i32),
+  FunctionInvocation {
+    identifier: String,
+    arguments: Vec<Expression>,
+  },
   Unary {
     operator: UnaryOperator,
     expression: Box<Expression>,
@@ -23,6 +27,10 @@ impl fmt::Display for Expression {
       Expression::Identifier(i) => write!(f, "Expression::Identifier({})", i)?,
       Expression::Integer(n) => write!(f, "Expression::Intger({})", n)?,
       Expression::String(s) => write!(f, "Expression::String(\"{}\")", s)?,
+      Expression::FunctionInvocation {
+        identifier,
+        arguments,
+      } => writeln!(f, "{}({:?})", identifier, arguments)?,
       Expression::Unary {
         operator,
         expression,

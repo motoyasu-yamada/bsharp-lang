@@ -7,6 +7,8 @@ Else
   Print (b)
 End If
 
+DuDib()
+
 For i = 1 To 100
     If i Mod 15 = 0 Then
         Print("FizzBuzz ")
@@ -18,3 +20,17 @@ For i = 1 To 100
         Print(i)
     End If
 Next
+
+Fn DuDib()
+    Const n = 10
+    Const total = Fib(n)
+    Print ("第",n,"項 = ", total)
+End
+ 
+Fn Fib(n)
+    If n = 1 Or n = 2 Then
+        Fib = 1
+    Else
+        Fib = Fib(n - 2) + Fib(n - 1)
+    End If
+End

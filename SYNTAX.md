@@ -3,8 +3,10 @@ B# Syntax Specification
 https://users-cs.au.dk/amoeller/RegAut/JavaBNF.html
 
 ## Syntax
-
-- `Program`                   ::= `Statements` "EOF"
+- `Program`                   ::= `Statements` | `FunctionDeclaration` "EOF"
+- `FunctionDeclaration`       ::= `Fn` "IDENT" "EOL" 
+                                  `Statements`
+                                  `End`
 - `Statements`                ::= `Statement` | `Statements` "EOL" `Statement` 
 - `Statement`                 ::= `EmptyStatement` | 
                                   `IfBlock` | 

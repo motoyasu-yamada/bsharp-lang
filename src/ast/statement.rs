@@ -1,7 +1,7 @@
 use super::expression::Expression;
 use std::fmt;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Statement {
   Declaration {
     identifier: String,

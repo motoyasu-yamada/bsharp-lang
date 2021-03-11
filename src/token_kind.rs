@@ -38,6 +38,7 @@ pub enum TokenKind {
   GE,
   LT,
   LE,
+  FUNCTION,
 }
 
 impl fmt::Display for TokenKind {
