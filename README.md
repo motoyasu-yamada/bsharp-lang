@@ -18,6 +18,11 @@ This ***B#(b-sharp)*** is an original programming language written in Rust. This
 - `source $HOME/.cargo/env`
 - `cargo init --bin`
 
+### Debug
+- `cargo run samples/test.bs`
+- VS Code `CodeLLDB` を導入
+- `launch.json` を `LLDB` で作成する
+
 ### Test run
 `cargo run samples/test.bs`
 
