@@ -17,7 +17,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 fn main() {
-  env::set_var("RUST_LOG", "debug");
+  env::set_var("RUST_LOG", "info");
   env_logger::init();
 
   let args: Vec<String> = env::args().collect();

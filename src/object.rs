@@ -40,7 +40,7 @@ impl fmt::Display for Object {
       Object::Integer(v) => write!(fmt, "Integer({})", v),
       Object::Boolean(b) => write!(fmt, "Boolean({})", b),
       Object::String(s) => write!(fmt, "String(\"{}\")", s),
-      Object::Function(f) => write!(fmt, "Function(\"{}\")", f),
+      Object::Function(f) => write!(fmt, "Function(\"{}\")", f.identifier),
     }
   }
 }

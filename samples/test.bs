@@ -1,36 +1,36 @@
-Const a = 1 + 2
-Const b = a * (a + 1 * 2 + 2 - 1 * 4)
-Print (b, a = 3)
-If a = 3 Then
-  Print (a)
-Else
-  Print (b)
-End If
+Print(Add(1,2))
+DoFib(2)
+DoFizzBuzz(20)
 
-DuDib()
+Fn DoFizzBuzz(max)
+    Print ("FizzBuzz", max)
+    For i = 1 To max
+        If i Mod 15 = 0 Then
+            Print("FizzBuzz ")
+        Else If i Mod 5 = 0 Then
+            Print("Buzz ")
+        Else If i Mod 3 = 0 Then
+            Print("Fizz ")
+        Else
+            Print(i)
+        End If
+    Next
+End
 
-For i = 1 To 100
-    If i Mod 15 = 0 Then
-        Print("FizzBuzz ")
-    Else If i Mod 5 = 0 Then
-        Print("Buzz ")
-    Else If i Mod 3 = 0 Then
-        Print("Fizz ")
-    Else
-        Print(i)
-    End If
-Next
+Fn Add(l,r)
+    Ret = l + r
+End
 
-Fn DuDib()
-    Const n = 10
-    Const total = Fib(n)
+Fn DoFib(n)
+    Print ("DoFib")
+    Const total = Fib(1)
     Print ("第",n,"項 = ", total)
 End
  
 Fn Fib(n)
     If n = 1 Or n = 2 Then
-        Fib = 1
+        Ret = 1
     Else
-        Fib = Fib(n - 2) + Fib(n - 1)
+        Ret = Fib(n - 2) + Fib(n - 1)
     End If
 End

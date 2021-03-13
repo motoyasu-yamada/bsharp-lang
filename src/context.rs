@@ -1,11 +1,23 @@
 use super::object::Object;
 use super::runtime_error::RuntimeError;
 use std::collections::BTreeMap;
+use std::fmt;
 
 type Variables = BTreeMap<String, Object>;
 
 pub struct Context {
   stack: Vec<Variables>,
+}
+impl fmt::Display for Context {
+  fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    for variables in self.stack.iter() {
+      for (name, value) in variables {
+        writeln!(fmt, "{}={}", name, value)?;
+      }
+      writeln!(fmt, "----------------------------------------")?;
+    }
+    Ok(())
+  }
 }
 
 impl Context {

@@ -54,7 +54,7 @@ impl Executor {
       Statement::Assignment {
         identifier,
         expression,
-      } => self.execute_const_assignment(identifier, &expression),
+      } => self.execute_assignment(identifier, &expression),
       Statement::MethodInvocation {
         identifier,
         arguments,
@@ -126,6 +126,7 @@ impl Executor {
     arguments: &Vec<Expression>,
   ) -> Result<Object, RuntimeError> {
     debug!("[Executor] >>>execute_method: {}", identifier);
+    let ret_variable_name = String::from("Ret");
     let mut evaluated_arguments: Vec<Object> = vec![];
     for a in arguments {
       let e = self.execute_expression(a)?;
@@ -153,9 +154,10 @@ impl Executor {
           }
           self
             .context
-            .declare_variable(identifier, &Object::Undefined)?;
+            .declare_variable(&ret_variable_name, &Object::Undefined)?;
+          debug!("[Context]\n {}", self.context);
           self.execute_statements(&f.statements)?;
-          let r = self.context.get_variable(identifier)?;
+          let r = self.context.get_variable(&ret_variable_name)?;
           self.context.pop_stack();
           r
         }
@@ -167,7 +169,7 @@ impl Executor {
         }
       },
     };
-
+    debug!("[Context]\n {}", self.context);
     debug!("[Executor] <<<execute_method: {}: {}", identifier, r);
     Ok(r)
   }
@@ -179,6 +181,16 @@ impl Executor {
   ) -> Result<Object, RuntimeError> {
     let evaluated = self.execute_expression(expression)?;
     self.context.declare_variable(identifier, &evaluated)?;
+    Ok(evaluated)
+  }
+
+  fn execute_assignment(
+    &mut self,
+    identifier: &String,
+    expression: &Expression,
+  ) -> Result<Object, RuntimeError> {
+    let evaluated = self.execute_expression(expression)?;
+    self.context.set_variable(identifier, &evaluated)?;
     Ok(evaluated)
   }
 
