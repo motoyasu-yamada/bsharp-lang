@@ -18,6 +18,9 @@ pub fn get_keyword(ident: &str) -> TokenKind {
     "Next" => TokenKind::NEXT,
     "Function" => TokenKind::FUNCTION,
     "Fn" => TokenKind::FUNCTION,
+    "True" => TokenKind::TRUE,
+    "False" => TokenKind::FALSE,   
+    "Return" => TokenKind::RETURN, 
     _ => TokenKind::IDENT,
   }
 }

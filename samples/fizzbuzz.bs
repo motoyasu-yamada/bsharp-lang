@@ -1,0 +1,16 @@
+DoFizzBuzz(100)
+
+Fn DoFizzBuzz(max)
+    Print ("FizzBuzz", max)
+    For i = 1 To max
+        If i Mod 15 = 0 Then
+            Print("FizzBuzz ")
+        Else If i Mod 5 = 0 Then
+            Print("Buzz ")
+        Else If i Mod 3 = 0 Then
+            Print("Fizz ")
+        Else
+            Print(i)
+        End If
+    Next
+End

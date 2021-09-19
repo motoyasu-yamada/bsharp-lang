@@ -1,0 +1,16 @@
+DoFib(100)
+DoFizzBuzz(100)
+
+Fn DoFib(n)
+    Print ("DoFib")
+    Const total = Fib(1)
+    Print ("第",n,"項 = ", total)
+End
+ 
+Fn Fib(n)
+    If n = 1 Or n = 2 Then
+        Ret = 1
+    Else
+        Ret = Fib(n - 2) + Fib(n - 1)
+    End If
+End

@@ -4,6 +4,10 @@
 This ***B#(b-sharp)*** is an original programming language written in Rust. This language, ***B#***, is extended from 'Visual Basic'.  
 
 ## Development Environment
+```
+sudo api install cargo
+```
+
 ### Install
 - `curl https://sh.rustup.rs -sSf | sh`
 - Choose `1) Proceed with installation (default)`

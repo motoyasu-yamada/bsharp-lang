@@ -38,6 +38,9 @@ pub enum TokenKind {
   GE,
   LT,
   LE,
+  TRUE,
+  FALSE,
+  RETURN,
   FUNCTION,
 }
 

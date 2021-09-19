@@ -3,6 +3,7 @@ use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
+  Boolean(bool),
   Identifier(String),
   String(String),
   Integer(i32),
@@ -24,6 +25,7 @@ pub enum Expression {
 impl fmt::Display for Expression {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
+      Expression::Boolean(b) => write!(f, "Expression::Boolean({})", b)?,
       Expression::Identifier(i) => write!(f, "Expression::Identifier({})", i)?,
       Expression::Integer(n) => write!(f, "Expression::Intger({})", n)?,
       Expression::String(s) => write!(f, "Expression::String(\"{}\")", s)?,

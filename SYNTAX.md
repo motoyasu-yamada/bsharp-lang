@@ -64,3 +64,12 @@ https://users-cs.au.dk/amoeller/RegAut/JavaBNF.html
 - `MethodName`                ::= `Identifier`
 
 
+## 
+<digits> ::= <digit> | <digits> <digit>
+<digit> ::= 0 | <non zero digit>
+<floating-point literal> ::= <digits> . <digits>? <exponent part>? <float type suffix>?
+<exponent part> ::= <exponent indicator> <signed integer>
+<exponent indicator> ::= e | E
+<signed integer> ::= <sign>? <digits>
+<signed integer> ::= <sign>? <digits>
+<float type suffix> ::= f | F | d | D

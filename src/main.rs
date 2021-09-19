@@ -37,7 +37,7 @@ fn main() {
   let program = parser.parse_program();
   match program {
     Ok(p) => {
-      println!("{:?}", p);
+      println!("{:#?}", p);
       let r = e.execute(&p);
       match r {
         Ok(r) => {

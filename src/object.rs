@@ -36,11 +36,11 @@ pub enum Object {
 impl fmt::Display for Object {
   fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      Object::Undefined => write!(fmt, "Undefined"),
-      Object::Integer(v) => write!(fmt, "Integer({})", v),
-      Object::Boolean(b) => write!(fmt, "Boolean({})", b),
-      Object::String(s) => write!(fmt, "String(\"{}\")", s),
-      Object::Function(f) => write!(fmt, "Function(\"{}\")", f.identifier),
+      Object::Undefined => write!(fmt, "[Undefined]"),
+      Object::Integer(v) => write!(fmt, "{}", v),
+      Object::Boolean(b) => write!(fmt, "[Boolean] ({})", b),
+      Object::String(s) => write!(fmt, "{}", s),
+      Object::Function(f) => write!(fmt, "[Function] (\"{}\")", f.identifier),
     }
   }
 }

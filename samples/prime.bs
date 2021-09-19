@@ -1,0 +1,24 @@
+Primes(30)
+
+Fn IsPrime(Number)
+    If Number <= 2 Then
+      Return True
+    End If
+
+    For K = 2 To Number / 2
+      If Number Mod K = 0 Then
+        Return False
+      End If
+    Next
+    Return True
+End
+
+Fn Primes(max)
+  For i = 1 To max
+    If IsPrime(i) Then
+      Print ("O", i)
+    Else
+      Print ("X", i)
+    End If
+  Next
+End

@@ -10,12 +10,14 @@ use std::rc::Rc;
 
 pub struct Executor {
   context: Context,
+  to_return: bool,
 }
 
 impl Executor {
   pub fn new() -> Self {
     return Executor {
       context: Context::new_root(),
+      to_return: false,
     };
   }
 
@@ -39,6 +41,9 @@ impl Executor {
   fn execute_statements(&mut self, statements: &Vec<Statement>) -> Result<Object, RuntimeError> {
     debug!("[Executor] >>>execute_statements");
     for s in statements {
+      if self.to_return {
+        break;
+      }
       self.execute_statement(s)?;
     }
     debug!("[Executor] <<<execute_statements");
@@ -116,6 +121,13 @@ impl Executor {
         }
         return Ok(Object::Undefined);
       }
+      Statement::ReturnStatement {expression} => {
+        let evaluated = self.execute_expression(expression)?;
+        let ret_variable_name = String::from("Ret");
+        self.context.set_variable(&ret_variable_name, &evaluated)?;
+        self.to_return = true;
+        return Ok(Object::Undefined);
+      }
       Statement::Empty => Ok(Object::Undefined),
     }
   }
@@ -157,6 +169,7 @@ impl Executor {
             .declare_variable(&ret_variable_name, &Object::Undefined)?;
           debug!("[Context]\n {}", self.context);
           self.execute_statements(&f.statements)?;
+          self.to_return = false;
           let r = self.context.get_variable(&ret_variable_name)?;
           self.context.pop_stack();
           r
@@ -196,6 +209,7 @@ impl Executor {
 
   fn execute_expression(&mut self, expression: &Expression) -> Result<Object, RuntimeError> {
     match expression {
+      Expression::Boolean(value) => Ok(Object::Boolean(*value)),
       Expression::Identifier(name) => self.context.get_variable(name),
       Expression::Integer(value) => Ok(Object::Integer(*value)),
       Expression::String(value) => Ok(Object::String(value.clone())),
@@ -221,8 +235,8 @@ impl Executor {
             BinaryOperator::NE => Ok(Object::Boolean(l != r)),
             BinaryOperator::GT => Ok(Object::Boolean(l > r)),
             BinaryOperator::LT => Ok(Object::Boolean(l < r)),
-            BinaryOperator::LE => Ok(Object::Boolean(l >= r)),
-            BinaryOperator::GE => Ok(Object::Boolean(l <= r)),
+            BinaryOperator::LE => Ok(Object::Boolean(l <= r)),
+            BinaryOperator::GE => Ok(Object::Boolean(l >= r)),
             _ => Err(RuntimeError::TypeMismatch {
               expected: RuntimeType::Integer,
               actual: RuntimeType::Boolean,

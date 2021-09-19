@@ -25,6 +25,9 @@ pub enum Statement {
     loop_counter_to: Expression,
     block: Vec<Statement>,
   },
+  ReturnStatement {
+    expression: Expression,
+  },
   Empty,
 }
 impl fmt::Display for Statement {
@@ -76,6 +79,7 @@ impl fmt::Display for Statement {
         }
         writeln!(f, "End If")?;
       }
+      Statement::ReturnStatement{expression} => writeln!(f, "Return {}", expression)?,
       Statement::Empty => write!(f, "<empty>")?,
     }
     Ok(())

@@ -1,36 +1,5 @@
 Print(Add(1,2))
-DoFib(2)
-DoFizzBuzz(20)
-
-Fn DoFizzBuzz(max)
-    Print ("FizzBuzz", max)
-    For i = 1 To max
-        If i Mod 15 = 0 Then
-            Print("FizzBuzz ")
-        Else If i Mod 5 = 0 Then
-            Print("Buzz ")
-        Else If i Mod 3 = 0 Then
-            Print("Fizz ")
-        Else
-            Print(i)
-        End If
-    Next
-End
 
 Fn Add(l,r)
     Ret = l + r
-End
-
-Fn DoFib(n)
-    Print ("DoFib")
-    Const total = Fib(1)
-    Print ("第",n,"項 = ", total)
-End
- 
-Fn Fib(n)
-    If n = 1 Or n = 2 Then
-        Ret = 1
-    Else
-        Ret = Fib(n - 2) + Fib(n - 1)
-    End If
 End

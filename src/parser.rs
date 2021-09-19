@@ -167,13 +167,29 @@ impl<'a> Parser<'a> {
       TokenKind::DIM => self.parse_const_assignment_statement()?,
       TokenKind::CONST => self.parse_const_assignment_statement()?,
       TokenKind::EOL => Statement::Empty,
+      TokenKind::RETURN => self.parse_return_statement()?,
       _ => self.parse_expression_statement()?,
     };
     debug!("<<< parse_statement {}", s);
     Ok(s)
   }
 
+  fn parse_return_statement(&mut self) -> Result<Statement,ParseError> {
+    debug!(">>> parse_return_statement");
+    self.next_token();
+    let expression = self.parse_expression()?;
+    if self.current_token.kind != TokenKind::EOL {
+      return Err(self.raise_error(
+        ParseErrorType::InvalidToken,
+        format!("Expected EOL, but {}", self.current_token.kind),
+      ));
+    }
+    debug!("<<< parse_return_statement {}", expression);
+    Ok(Statement::ReturnStatement { expression })
+  }
+
   fn parse_if_statement(&mut self) -> Result<Statement, ParseError> {
+    debug!(">>> parse_if_statement");
     let mut if_blocks: Vec<(Expression, Vec<Statement>)> = vec![];
     let mut else_statements: Vec<Statement> = vec![];
     let to_stop: fn(&TokenKind) -> bool = |k| *k == TokenKind::ELSE || *k == TokenKind::END;
@@ -186,7 +202,11 @@ impl<'a> Parser<'a> {
         ));
       }
       self.next_token();
+      
+      debug!(">>> condition");
       let condition = self.parse_expression()?;
+      debug!("<<< condition");
+      debug!(">>> then_block");
       if self.current_token.kind != TokenKind::THEN {
         return Err(self.raise_error(
           ParseErrorType::InvalidToken,
@@ -202,7 +222,7 @@ impl<'a> Parser<'a> {
       }
       self.next_token();
       let statements: Vec<Statement> = self.parse_statements(to_stop)?;
-
+      debug!("<<< then_block");
       if_blocks.push((condition, statements));
     }
 
@@ -616,6 +636,8 @@ impl<'a> Parser<'a> {
         _ => Expression::Identifier(self.current_token.value.clone()),
       },
       TokenKind::INT => Expression::Integer(self.current_token.value.parse::<i32>().unwrap()),
+      TokenKind::TRUE => Expression::Boolean(true),
+      TokenKind::FALSE => Expression::Boolean(false),
       TokenKind::STRING => Expression::String(self.current_token.value.clone()),
       TokenKind::LPAREN => self.parse_grouped_expression()?,
       _ => {
